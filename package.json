@@ -1,0 +1,25 @@
+{
+  "name": "node-spider",
+  "version": "0.0.1",
+  "description": "a spider writen by node.js",
+  "main": "index.js",
+  "dependencies": {
+    "cheerio": "^0.20.0",
+    "koa": "^1.2.0",
+    "node-fetch": "^1.5.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luwenxull/node-spider.git"
+  },
+  "author": "luwenxull",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/luwenxull/node-spider/issues"
+  },
+  "homepage": "https://github.com/luwenxull/node-spider#readme"
+}
