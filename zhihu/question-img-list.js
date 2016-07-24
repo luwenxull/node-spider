@@ -81,11 +81,11 @@ let list = [
         questionId: '28481779'
         , questionTitle: '腿长是一种什么体验'
         , index: 19
-    }, {
+    }, /*{
         questionId: '34243513'
         , questionTitle: '你见过最漂亮的女生长什么样'
         , index: 20
-    }
+    }*/
 ];
 
 module.exports = list;

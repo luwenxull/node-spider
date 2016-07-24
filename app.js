@@ -17,5 +17,5 @@ let {
 } = require('./zhihu/question-img-spider'); //start();
 
 //reWrite('38694587');
-writeStart()
+writeStart(3);
 //app.listen(3000);
