@@ -3,10 +3,10 @@ let log = console.log;
 let fs = require('fs');
 let path = require('path');
 let request = require('request');
-let question_img_list = require('./question-img-list');
+let question_img_list = require('./img-list');
 
 /*写图片*/
-let {writeImages,willWrite}=require('./writeImages');
+let {writeImages}=require('./../writeImages');
 
 /*参数*/
 let pageSize = 10
@@ -18,7 +18,7 @@ let downloadIterator;
 let currentQuestionIndex,
     singleDownload = false;
 
-let globalSettings={};
+let globalSettings = {};
 function *recordSrc(wholeSrcOfQuestion, recordPath) {
     //fs.writeFile(recordPath,JSON.stringify(wholeSrcOfQuestion),(err)=>{});
     let filter = yield fs.readFile(recordPath, (err, data)=> {
@@ -37,47 +37,34 @@ function *recordSrc(wholeSrcOfQuestion, recordPath) {
             for (let srcWithPeople of wholeSrcOfQuestion) {
                 if (writedSrc.indexOf(srcWithPeople.src) == -1) newSrc.push(srcWithPeople)
             }
-            downloadIterator.next(newSrc)
+            downloadIterator.next(newSrc);
+            // downloadIterator.next(wholeSrcOfQuestion)
         }
     });
     return filter
 }
 
 function *recordAndGo(wholeSrcOfQuestion) {
-    let recordPath = 'zhihu/srcDownloaded/' + globalSettings.currentQuestion.questionId + '.js';
+    let recordPath = 'zhihu/question-spider/questionImageRecord/' + globalSettings.currentQuestion.id + '.js';
     let filterSrc = yield * recordSrc(wholeSrcOfQuestion, recordPath);
     yield * ready(filterSrc);
 }
 
 function *ready(wholeSrcOfQuestion) {
     let length = wholeSrcOfQuestion.length;
-    log('总共筛选', length, '张~');
-    if(length){
-        let id=globalSettings.currentQuestion.questionId;
-        willWrite(id,length);
-        for (let i = 0; i < wholeSrcOfQuestion.length; i++) {
-            wholeSrcOfQuestion[i].index = i;
-            wholeSrcOfQuestion[i].id = id;
-        }
-
-        for (let srcIndex = 0; srcIndex < wholeSrcOfQuestion.length / 20; srcIndex++) {
-            let offsetStart = srcIndex * 20
-                , offsetEnd = srcIndex * 20 + 20;
-            if (offsetEnd > length) offsetEnd = length;
-            let slice = wholeSrcOfQuestion.slice(offsetStart, offsetEnd);
-            yield writeImages({slice,whole:wholeSrcOfQuestion},{offsetStart,offsetEnd:offsetEnd-1},downloadIterator)
-        }
+    log('find', length, ' images');
+    if (length) {
+        yield *writeImages(wholeSrcOfQuestion, globalSettings.currentQuestion, downloadIterator, notifyOfContinue);
+    } else {
+        notifyOfContinue();
     }
-    log(singleDownload,currentQuestionIndex,question_img_list.length)
-    if (!singleDownload && currentQuestionIndex < question_img_list.length-1)
-        return writeStart(++currentQuestionIndex);
+
 }
 
-function getImageUrl(question) {
-
+function getImageUrl() {
     let ni_ming_index = 0;
     let wholeSrcOfQuestion = [];
-    indexGet(wholeSrcOfQuestion,ni_ming_index);
+    indexGet(wholeSrcOfQuestion, ni_ming_index);
 }
 
 function findImgOfAuthorAndConcat($, wholeSrcOfQuestion, ni_ming_index) {
@@ -103,45 +90,41 @@ function findImgOfAuthorAndConcat($, wholeSrcOfQuestion, ni_ming_index) {
     return ni_ming_index;
 }
 
-function indexGet(wholeSrcOfQuestion,ni_ming_index){
+function indexGet(wholeSrcOfQuestion, ni_ming_index) {
     let optionsOfGet = {
-        method: 'GET', url: baseGetUrl + globalSettings.currentQuestion.questionId
+        method: 'GET', url: baseGetUrl + globalSettings.currentQuestion.id
     };
     request(optionsOfGet, (err, res, body) => {
         if (err) log(err);
         let $ = cheerio.load(body);
-        loopPost(10,wholeSrcOfQuestion,findImgOfAuthorAndConcat($, wholeSrcOfQuestion, ni_ming_index));
+        loopPost(10, wholeSrcOfQuestion, findImgOfAuthorAndConcat($, wholeSrcOfQuestion, ni_ming_index));
     });
 }
 
 function getOptionsOfPost(offset) {
     return {
-        method: 'POST'
-        , url: basePostUrl
-        , headers: {
-            'content-type': 'application/x-www-form-urlencoded'
-        }
-        , form: {
-            method: 'next'
-            , params: '{"url_token":' + globalSettings.currentQuestion.questionId + ',"pagesize":' + pageSize + ',"offset":' + offset + '}'
+        method: 'POST',
+        url: basePostUrl,
+        headers: {'content-type': 'application/x-www-form-urlencoded'},
+        form: {
+            method: 'next',
+            params: '{"url_token":' + globalSettings.currentQuestion.id + ',"pagesize":' + pageSize + ',"offset":' + offset + '}'
         }
     };
 }
 
-function loopPost(offset,wholeSrcOfQuestion,ni_ming_index) {
+function loopPost(offset, wholeSrcOfQuestion, ni_ming_index) {
     let options = getOptionsOfPost(offset);
     let got = false, rePost = false;
-    setTimeout(()=> {
-        if (!got) {
-            rePost = true;
-            loopPost(offset,wholeSrcOfQuestion,ni_ming_index)
-        }
+    let timeout = setTimeout(()=> {
+        rePost = true;
+        loopPost(offset, wholeSrcOfQuestion, ni_ming_index)
     }, 5000);
     request(options, function (error, response, body) {
         try {
             if (error) throw new Error(error);
             if (!rePost) {
-                got = true;
+                clearTimeout(timeout);
                 //log(body);
                 let json = JSON.parse(body)
                     , $;
@@ -150,14 +133,14 @@ function loopPost(offset,wholeSrcOfQuestion,ni_ming_index) {
                 if (json.msg.length !== 0) {
                     for (let htmlString of json.msg) {
                         $ = cheerio.load(htmlString);
-                        ni_ming_index=findImgOfAuthorAndConcat($, wholeSrcOfQuestion, ni_ming_index)
+                        ni_ming_index = findImgOfAuthorAndConcat($, wholeSrcOfQuestion, ni_ming_index)
                     }
-                    log('检索图片地址...', wholeSrcOfQuestion.length, '张');
-                    loopPost(offset + 10,wholeSrcOfQuestion, ni_ming_index);
+                    log('retrieve images...,find:', wholeSrcOfQuestion.length);
+                    loopPost(offset + 10, wholeSrcOfQuestion, ni_ming_index);
                 } else {
-                    fs.access('pic/' + globalSettings.currentQuestion.questionId, err=> {
+                    fs.access('pic/' + globalSettings.currentQuestion.id, err=> {
                         if (err) {
-                            fs.mkdirSync('pic/' + globalSettings.currentQuestion.questionId);
+                            fs.mkdirSync('pic/' + globalSettings.currentQuestion.id);
                         }
                         //log(wholeSrcOfQuestion);
                         downloadIterator = recordAndGo(wholeSrcOfQuestion);
@@ -168,34 +151,33 @@ function loopPost(offset,wholeSrcOfQuestion,ni_ming_index) {
         }
         catch (err) {
             log(err);
-            loopPost(offset);
+            if (!rePost) {
+                clearTimeout(timeout);
+                loopPost(offset, wholeSrcOfQuestion, ni_ming_index);
+            }
+
         }
     });
 }
 
 function writeStart(index) {
     //singleDownload = true;
-    currentQuestionIndex=index;
-    let currentQuestion=question_img_list[index];
-    globalSettings.currentQuestion=currentQuestion;
-    getImageUrl(currentQuestion);
+    currentQuestionIndex = index;
+
+    globalSettings.currentQuestion = question_img_list[index];
+    getImageUrl();
     /*getImages({
      questionId: '30994559',
      //index:21
      })*/
 }
 
-function reWrite(id) {
-    questionId = id;
-    fs.mkdirSync('pic/' + id);
-    fs.readFile('tempSrcList.js', {
-        encoding: 'utf8'
-    }, (err, data) => {
-        if (err) throw err;
-        let wholeSrcOfQuestion = JSON.parse(data);
-        downloadIterator = ready(wholeSrcOfQuestion);
-        downloadIterator.next();
-    })
+function notifyOfContinue() {
+    if (!singleDownload && currentQuestionIndex < question_img_list.length - 1) {
+        writeStart(++currentQuestionIndex)
+    } else {
+        log('all finished!!!')
+    }
 }
 
 process.on('uncaughtException', (err) => {
@@ -203,4 +185,3 @@ process.on('uncaughtException', (err) => {
 });
 
 exports.writeStart = writeStart;
-exports.reWrite = reWrite;

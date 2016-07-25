@@ -14,8 +14,8 @@ app.use(function* () {
 });*/
 let {
     writeStart, reWrite
-} = require('./zhihu/question-img-spider'); //start();
+} = require('./zhihu/question-spider/spider'); //start();
 
 //reWrite('38694587');
-writeStart(3);
+writeStart(0);
 //app.listen(3000);
