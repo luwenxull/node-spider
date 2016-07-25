@@ -9,39 +9,39 @@ function preHandle(srcArr, item) {
         srcArr[i].id = item.id;
     }
 }
-function * writeImages(srcArr, item, iterator,notify) {
+function * writeImages(srcArr, item, iterator, notify) {
     preHandle(srcArr, item);
     let groupIndex = 0,
         groupCount = Math.ceil(srcArr.length / 20),
         length = srcArr.length,
         id = item.id,
-        successCount=0,
-        downloadFinish=false;
+        successCount = 0,
+        downloadFinish = false;
 
-    
-    let groupStreamsCollection=[],
+
+    let groupStreamsCollection = [],
         timeoutCheck;
-    let groupWrite = function (slice, offsetInfo,groupIndex) {
+    let groupWrite = function (slice, offsetInfo, groupIndex) {
         let groupOpenedStreams = [];
         for (let srcData of slice) {
             try {
-                groupOpenedStreams.push(writeImage(srcData, offsetInfo,groupOpenedStreams,groupIndex))
-            }catch (err){
+                groupOpenedStreams.push(writeImage(srcData, offsetInfo, groupOpenedStreams, groupIndex))
+            } catch (err) {
                 log(err)
             }
         }
         groupStreamsCollection.push(groupOpenedStreams);
-        timeoutCheck=setTimeout(()=>{
-            groupWriteCheck(null,groupOpenedStreams,true)
-        },15000)
+        timeoutCheck = setTimeout(()=> {
+            groupWriteCheck(null, groupOpenedStreams, true)
+        }, 15000)
     };
 
-    let groupWriteCheck = function (stream,groupOpenedStreams,timeout) {
-        if(timeout){
+    let groupWriteCheck = function (stream, groupOpenedStreams, timeout) {
+        if (timeout) {
             checkIfFinish();
-        }else{
-            groupOpenedStreams.splice(groupOpenedStreams.indexOf(stream),1);
-            if(groupOpenedStreams.length===0){
+        } else {
+            groupOpenedStreams.splice(groupOpenedStreams.indexOf(stream), 1);
+            if (groupOpenedStreams.length === 0) {
                 log('group download finish,next>>>');
                 clearTimeout(timeoutCheck);
                 checkIfFinish();
@@ -49,34 +49,34 @@ function * writeImages(srcArr, item, iterator,notify) {
         }
     };
 
-    let checkIfFinish=function(){
-        if(iterator.next().done){
-            downloadFinish=true;
-            for(let groupOpenedStreams of groupStreamsCollection){
-                for(let s of groupOpenedStreams){
+    let checkIfFinish = function () {
+        if (iterator.next().done) {
+            downloadFinish = true;
+            for (let groupOpenedStreams of groupStreamsCollection) {
+                for (let s of groupOpenedStreams) {
                     s.end()
                 }
             }
-            log('Download Finish!Total：',length,',success：',successCount);
+            log('Download Finish!Total：', length, ',success：', successCount);
             notify();
         }
     };
 
-    let writeImage = function (srcData, offsetInfo,groupOpenedStreams,groupIndex) {
-        let {src, people, index, id} = srcData,
+    let writeImage = function (srcData, offsetInfo, groupOpenedStreams, groupIndex) {
+        let {src, people, index, id,question} = srcData,
             {offsetStart, offsetEnd}=offsetInfo;
-
-        let stream = fs.createWriteStream(path.join('pic', 'test', people || '' + path.basename(src)));
+        let savePath=path.join('pic', id, (people || question) + path.basename(src));
+        let stream = fs.createWriteStream(savePath);
         stream.on('close', () => {
-            if(!downloadFinish){
-                log('save',src,index,offsetStart+'~'+offsetEnd,length);
+            if (!downloadFinish) {
+                log('save', src, index, offsetStart + '~' + offsetEnd, length,id);
                 successCount++;
-                groupWriteCheck(stream,groupOpenedStreams)
+                groupWriteCheck(stream, groupOpenedStreams)
             }
         }).on('error', err => {
             log(err);
-            log('fail',src,length);
-            groupWriteCheck(stream,groupOpenedStreams)
+            log('fail', src, length);
+            groupWriteCheck(stream, groupOpenedStreams)
         });
         return request(src).pipe(stream);
     };
@@ -87,7 +87,7 @@ function * writeImages(srcArr, item, iterator,notify) {
         groupIndex++;
         if (offsetEnd > length) offsetEnd = length;
         let slice = srcArr.slice(offsetStart, offsetEnd);
-        yield groupWrite(slice, {offsetStart, offsetEnd: offsetEnd - 1},groupIndex)
+        yield groupWrite(slice, {offsetStart, offsetEnd: offsetEnd - 1}, groupIndex)
     }
 }
 

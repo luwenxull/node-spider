@@ -161,7 +161,7 @@ function loopPost(offset, wholeSrcOfQuestion, ni_ming_index) {
 }
 
 function writeStart(index) {
-    //singleDownload = true;
+    singleDownload = true;
     currentQuestionIndex = index;
 
     globalSettings.currentQuestion = question_img_list[index];

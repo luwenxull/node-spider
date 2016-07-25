@@ -4,13 +4,36 @@
 let list=[
     {
         id:'dai-ai-ai-22',
-        index:0
+        index:0,
+        name:'戴呆呆'
     },{
         id:'hao-qing-54',
-        index:1
+        index:1,
+        name:'昨晚你好棒'
     },{
         id:'wan-dou-9-68',
-        index:2
+        index:2,
+        name:'豌豆'
+    },{
+        id:'lei-mei-tai-si-15',
+        index:3,
+        name:'雷梅苔丝'
+    },{
+        id:'a-dou-dou-70',
+        index:4,
+        name:'兜兜啊'
+    },{
+        id:'catherinedaiyu',
+        index:5,
+        name:'凯瑟琳黛玉'
+    },{
+        id:'dang-qia-qia-40',
+        index:6,
+        name:'Iracebeth'
+    },{
+        id:'sherry-an-4',
+        index:7,
+        name:'scsc'
     }
 ];
 

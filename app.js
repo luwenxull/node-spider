@@ -17,7 +17,7 @@ let {
 } = require('./zhihu/question-spider/spider'); //start();
 
 let spider=require('./zhihu/user-spider/spider');
-spider.writeStart(2);
+spider.writeStart(7);
 
 //reWrite('38694587');
 // writeStart(0);
