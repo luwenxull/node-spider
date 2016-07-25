@@ -16,6 +16,9 @@ let {
     writeStart, reWrite
 } = require('./zhihu/question-spider/spider'); //start();
 
+let spider=require('./zhihu/user-spider/spider');
+spider.writeStart(2);
+
 //reWrite('38694587');
-writeStart(0);
+// writeStart(0);
 //app.listen(3000);

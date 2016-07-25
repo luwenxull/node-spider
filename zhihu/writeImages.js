@@ -65,9 +65,8 @@ function * writeImages(srcArr, item, iterator,notify) {
     let writeImage = function (srcData, offsetInfo,groupOpenedStreams,groupIndex) {
         let {src, people, index, id} = srcData,
             {offsetStart, offsetEnd}=offsetInfo;
-        let lengthToBeCheck = offsetEnd - offsetStart + 1;
 
-        let stream = fs.createWriteStream(path.join('pic', id, people + path.basename(src)));
+        let stream = fs.createWriteStream(path.join('pic', 'test', people || '' + path.basename(src)));
         stream.on('close', () => {
             if(!downloadFinish){
                 log('save',src,index,offsetStart+'~'+offsetEnd,length);
@@ -75,6 +74,7 @@ function * writeImages(srcArr, item, iterator,notify) {
                 groupWriteCheck(stream,groupOpenedStreams)
             }
         }).on('error', err => {
+            log(err);
             log('fail',src,length);
             groupWriteCheck(stream,groupOpenedStreams)
         });
