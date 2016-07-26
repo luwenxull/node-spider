@@ -37,7 +37,7 @@ function writeStart(index,question_img_list) {
             if (err) log(err);
             let $ = cheerio.load(body);
             findImgOfAuthorAndConcat($);
-            // loopPost(10);
+             //loopPost(10);
             getCollapsedAnswers();
         });
     }
@@ -184,16 +184,18 @@ function writeStart(index,question_img_list) {
         j.setCookie(cookie, 'https://www.zhihu.com');
         let options = {
             method: 'GET',
-            url: collapsedAnswers,
-            qs:{
-                params: '%7B%22question_id%22%3A'+qid+'%7D'
-            },
+            url: collapsedAnswers+'?params=%7B%22question_id%22%3A'+qid+'%7D',
+            //qs:{ params: '%7B%22question_id%22%3A6976557%7D' },
             jar: j
         };
 
-        log(options.qs.params);
+        //log(options.qs.params,options.url);
+        log('retrieve collapsed img...');
         request(options,(err,res,body)=>{
-            log(body)
+            $ = cheerio.load(body);
+            findImgOfAuthorAndConcat($);
+            log('find ',wholeSrcOfQuestion.length,'images in collapsed answers');
+            loopPost(10)
         })
 
     }
@@ -215,15 +217,11 @@ process.on('uncaughtException', (err) => {
     log(err);
 });
 
-function fetchImageOfQuestion(href,qid,titleCodePoint){
-
-    let title='';
-    for(let codePoint of titleCodePoint){
-        title+=String.fromCodePoint(codePoint)
-    }
+function fetchImageOfQuestion(href,qid,title){
     fs.readFile(__dirname+'/img-list.js','utf8',(err,data)=>{
         let currentSrcArr=JSON.parse(data);
         let newSrc={href,qid,title,index:currentSrcArr.length};
+        //log(newSrc);
         currentSrcArr.push(newSrc);
         fs.writeFile(__dirname+'/img-list.js',JSON.stringify(currentSrcArr),(err)=>{
             if(err){

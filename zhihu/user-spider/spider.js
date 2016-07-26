@@ -221,12 +221,7 @@ process.on('uncaughtException', (err) => {
     log(err);
 });
 
-function fetchImageOfUser(href,id,titleCodePoint){
-
-    let title='';
-    for(let codePoint of titleCodePoint){
-        title+=String.fromCodePoint(codePoint)
-    }
+function fetchImageOfUser(href,id,title){
     fs.readFile(__dirname+'/user-list.js','utf8',(err,data)=>{
         let currentSrcArr=JSON.parse(data);
         let newSrc={href,id,name:title,index:currentSrcArr.length};

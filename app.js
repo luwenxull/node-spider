@@ -6,6 +6,7 @@ var app = koa(),
 var log=console.log;
 var fs=require('fs');
 var serve=require('koa-static');
+var koaBody=require('koa-body')();
 app.use(function* (next) {
     var start = new Date;
     yield next;
@@ -15,21 +16,29 @@ app.use(function* (next) {
 
 router.get('/',function *() {
     // this.body=
-}).get('/zh/q/:href/:id',function*(...args){
-    let path=this.request.path,
+}).post('/zh/q',koaBody,function*(...args){
+    /*let path=this.request.path,
         pathArr=path.split('/');
     let title=this.request.querystring.replace('t=','').replace(/\\u/g,'|0x').split('|').slice(1);
     let href=pathArr[3],
         qid=pathArr[4];
-    question_spider.fetchImageOfQuestion(href,qid,title);
-    this.body=href+'.'+qid+'.'+title
-}).get('/zh/u/:href',function*(){
-    let path=this.request.path,
+
+    this.body=href+'.'+qid+'.'+title*/
+    let reqBody=this.request.body;
+    //log(reqBody);
+    question_spider.fetchImageOfQuestion(reqBody.href,reqBody.qid,reqBody.title);
+    this.body='finish'
+}).post('/zh/u/',koaBody,function*(){
+    /*let path=this.request.path,
         pathArr=path.split('/');
     let title=this.request.querystring.replace('t=','').replace(/\\u/g,'|0x').split('|').slice(1);
     let href=pathArr[3];
     user_spider.fetchImageOfUser(href,href,title);
-    this.body=href+'.'+title
+    this.body=href+'.'+title*/
+    let reqBody=this.request.body;
+    //log(reqBody);
+    user_spider.fetchImageOfUser(reqBody.href,reqBody.href,reqBody.name);
+    this.body='finish'
 });
 
 app.use(serve('views'));
