@@ -6,6 +6,7 @@
   "dependencies": {
     "cheerio": "^0.20.0",
     "koa": "^1.2.0",
+    "koa-router": "^5.4.0",
     "node-fetch": "^1.5.3",
     "request": "^2.73.0"
   },

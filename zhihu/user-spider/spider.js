@@ -6,8 +6,8 @@ let log = console.log;
 let fs = require('fs');
 let path = require('path');
 let request = require('request');
-let user_img_list = require('./user-list');
-
+// let user_img_list = require('./user-list');
+let cookieValue=require('../cookie');
 /*写图片*/
 let {writeImages}=require('./../writeImages');
 
@@ -15,7 +15,8 @@ let baseGetUrl = 'https://www.zhihu.com/people/$$id/answers',
     deepQuestionUrl = 'https://www.zhihu.com';
 
 
-function writeStart(index) {
+function writeStart(index,user_img_list) {
+    
     let singleDownload = false;
     let downloadIterator;
 
@@ -27,8 +28,7 @@ function writeStart(index) {
     /*zhihu cookie*/
     let j = request.jar();
 
-    //let cookie=request.cookie('q_c1=cb283635a2754dfdac9779853e1b425e|1469447248000|1469447248000;_xsrf=f57a2d71687e156598a2256f7467459f;d_c0="AHCA9ROMSAqPTgKXzEqnOHvw3Y8fuupAw2Y=|1469447250";_zap=589ea08c-c214-4c0b-b8aa-453b635f6478;_za=4f864a44-21bc-47f6-a364-8d70db60e99e;l_cap_id="YThlZjYwNDY3ZjUyNDhlZmFiODIyODc3MmRlMjM0MzU=|1469447550|aa5d4eab880e360f84a939d1ea707e7a8307a051"; cap_id="YmQ1ZDdiOTNhYTA1NDc1Yjg5ZDRkNTgzODkxZDgxOGE=|1469447550|1fd229b6065c0150af9304f3b33734b383c02ed1"; login="ZmU2ZDY0ZjE0NWE1NDUwYTliZTgwZWU4ZGJiNzRlYTc=|1469447575|4a36d14a89f814742cf1d82993a9c0b99b62e9cb"; a_t="2.0AAAAUYkgAAAXAAAAl4q9VwAAAFGJIAAAAHCA9ROMSAoXAAAAYQJVTZeKvVcAMdqqxNHKvecJsMsSboBGrp2T62jVZIiGoc5YPnTclFKRHnwr9f6j5A=="; z_c0=Mi4wQUFBQVVZa2dBQUFBY0lEMUU0eElDaGNBQUFCaEFsVk5sNHE5VndBeDJxckUwY3E5NXdtd3l4SnVnRWF1blpQcmFB|1469447575|f51f5da0aa9b63afea447656e22cba0deeb3509e; n_c=1; s-q=leimeitaisi; s-i=1; sid=286t5368; s-t=autocomplete; __utmt=1; __utma=51854390.1542997138.1469447251.1469447251.1469450783.2; __utmb=51854390.16.9.1469451606938; __utmc=51854390; __utmz=51854390.1469450783.2.2.utmcsr=zhihu.com|utmccn=(referral)|utmcmd=referral|utmcct=/; __utmv=51854390.100-1|2=registration_date=20131111=1^3=entry_date=20131111=1');
-    let cookie = request.cookie('z_c0=Mi4wQUFBQVVZa2dBQUFBY0lEMUU0eElDaGNBQUFCaEFsVk5sNHE5VndBeDJxckUwY3E5NXdtd3l4SnVnRWF1blpQcmFB|1469447575|f51f5da0aa9b63afea447656e22cba0deeb3509e;a=1')
+    let cookie = request.cookie(cookieValue);
     j.setCookie(cookie, 'https://www.zhihu.com');
 
     /*request({
@@ -53,7 +53,7 @@ function writeStart(index) {
         let got = false,
             reGot = false;
 
-        log('retrieve', page);
+        log('retrieve page:', page);
         let timeout = setTimeout(()=> {
             log('page', page, ' timeout,will start an new fetch');
             reGot = true;
@@ -72,8 +72,6 @@ function writeStart(index) {
                     log('page', page, 'got!');
                     clearTimeout(timeout);
                     let $ = cheerio.load(body);
-                    // log(body);
-
                     findQuestionWithImage($)
                 }
             }
@@ -91,10 +89,12 @@ function writeStart(index) {
             zm_item.each((index, answer) => {
                 href = $(answer).find('.question_link').attr('href');
                 img = $(answer).find('.origin_image');
+                // log(href);
                 if (img.length) {
                     answerWithImage.push(href)
                 }
             });
+            log(answerWithImage);
             if (answerWithImage.length) {
                 for (let answer of answerWithImage) {
                     (()=>{
@@ -220,5 +220,31 @@ function writeStart(index) {
 process.on('uncaughtException', (err) => {
     log(err);
 });
+
+function fetchImageOfUser(href,id,titleCodePoint){
+
+    let title='';
+    for(let codePoint of titleCodePoint){
+        title+=String.fromCodePoint(codePoint)
+    }
+    fs.readFile(__dirname+'/user-list.js','utf8',(err,data)=>{
+        let currentSrcArr=JSON.parse(data);
+        let newSrc={href,id,name:title,index:currentSrcArr.length};
+        currentSrcArr.push(newSrc);
+        fs.writeFile(__dirname+'/user-list.js',JSON.stringify(currentSrcArr),(err)=>{
+            if(err){
+                log(err)
+            }else{
+                writeStart(currentSrcArr.length-1,currentSrcArr)
+            }
+        })
+    });
+
+}
+
+module.exports={
+    fetchImageOfUser,
+    writeStart
+};
 
 exports.writeStart = writeStart;
