@@ -4,6 +4,8 @@ var app = koa(),
     router=koa_router();
 //let fetch = require('node-fetch');
 var log=console.log;
+var fs=require('fs');
+var serve=require('koa-static');
 app.use(function* (next) {
     var start = new Date;
     yield next;
@@ -11,7 +13,9 @@ app.use(function* (next) {
     console.log('%s %s - %s', this.method, this.url, ms);
 });
 
-router.get('/zh/q/:href/:id',function*(...args){
+router.get('/',function *() {
+    // this.body=
+}).get('/zh/q/:href/:id',function*(...args){
     let path=this.request.path,
         pathArr=path.split('/');
     let title=this.request.querystring.replace('t=','').replace(/\\u/g,'|0x').split('|').slice(1);
@@ -19,16 +23,16 @@ router.get('/zh/q/:href/:id',function*(...args){
         qid=pathArr[4];
     question_spider.fetchImageOfQuestion(href,qid,title);
     this.body=href+'.'+qid+'.'+title
-}).get('/zh/u/:href/:id',function*(){
+}).get('/zh/u/:href',function*(){
     let path=this.request.path,
         pathArr=path.split('/');
     let title=this.request.querystring.replace('t=','').replace(/\\u/g,'|0x').split('|').slice(1);
-    let href=pathArr[3],
-        qid=pathArr[4];
-    user_spider.fetchImageOfUser(href,qid,title);
-    this.body=href+'.'+qid+'.'+title
+    let href=pathArr[3];
+    user_spider.fetchImageOfUser(href,href,title);
+    this.body=href+'.'+title
 });
 
+app.use(serve('views'));
 app.use(router.routes());
 /*// response
 app.use(function* () {
