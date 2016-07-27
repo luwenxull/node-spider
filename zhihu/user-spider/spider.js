@@ -15,15 +15,16 @@ let baseGetUrl = 'https://www.zhihu.com/people/$$id/answers',
     deepQuestionUrl = 'https://www.zhihu.com';
 
 
-function writeStart(index,user_img_list) {
+function prepareForWrite(href) {
     
     let singleDownload = false;
     let downloadIterator;
 
-    let user = user_img_list[index],
-        srcCollection = [];
+    let srcCollection = [];
 
     let page = 1;
+
+    let name;
 
     /*zhihu cookie*/
     let j = request.jar();
@@ -31,21 +32,13 @@ function writeStart(index,user_img_list) {
     let cookie = request.cookie(cookieValue);
     j.setCookie(cookie, 'https://www.zhihu.com');
 
-    /*request({
-     method: 'GET',
-     url: 'https://www.zhihu.com',
-     jar:j
-     },(err,res,body)=>{
-     fs.writeFile('test.html',body)
-     });*/
 
-    /*request('https://www.zhihu.com',(err,res,body)=>{
-     fs.writeFile('test.html',body)
-     });*/
-    let indexGet = function (page) {
+    let gotInfoOfUser=false;
+
+    let indexGet = function (fn) {
         let options = {
             method: 'GET',
-            url: baseGetUrl.replace('$$id', user.id),
+            url: baseGetUrl.replace('$$id', href),
             qs: {page: page},
             jar: j
         };
@@ -57,29 +50,38 @@ function writeStart(index,user_img_list) {
         let timeout = setTimeout(()=> {
             log('page', page, ' timeout,will start an new fetch');
             reGot = true;
-            indexGet(page)
+            indexGet()
         }, 5000);
         request(options, (err, res, body) => {
             if (err) {
                 log(err);
-                log(page, 'err');
+                // log(page, 'err');
                 if (!reGot) {
                     clearTimeout(timeout);
-                    indexGet(page);
+                    indexGet();
                 }
             } else {
                 if (!reGot) {
                     log('page', page, 'got!');
                     clearTimeout(timeout);
                     let $ = cheerio.load(body);
-                    findQuestionWithImage($)
+
+                    if(!gotInfoOfUser){
+                        name=$('.zu-main-content .name').text();
+                        fn(name,()=>{
+                            findQuestionWithImage($)
+                        });
+                        gotInfoOfUser=true;
+                    }else{
+                        findQuestionWithImage($)
+                    }
                 }
             }
         });
     };
 
     function findQuestionWithImage($) {
-        let href, people, img, src;
+        let imgHref, people, img, src;
         let zm_item = $('.zm-item'),
             length = zm_item.length,
             count = 0;
@@ -87,14 +89,14 @@ function writeStart(index,user_img_list) {
         let answerWithImage = [];
         if (length) {
             zm_item.each((index, answer) => {
-                href = $(answer).find('.question_link').attr('href');
+                imgHref = $(answer).find('.question_link').attr('href');
                 img = $(answer).find('.origin_image');
                 // log(href);
                 if (img.length) {
-                    answerWithImage.push(href)
+                    answerWithImage.push(imgHref)
                 }
             });
-            log(answerWithImage);
+            // log(answerWithImage);
             if (answerWithImage.length) {
                 for (let answer of answerWithImage) {
                     (()=>{
@@ -120,7 +122,8 @@ function writeStart(index,user_img_list) {
                                     //log(srcCollection);
                                     if (count == answerWithImage.length) {
                                         // log(srcCollection)
-                                        indexGet(++page)
+                                        page++;
+                                        indexGet()
                                     }
                                 }
                             })
@@ -130,13 +133,13 @@ function writeStart(index,user_img_list) {
 
                 }
             } else {
-                indexGet(++page)
+                page++;
+                indexGet()
             }
-
         } else {
-            fs.access('pic/' + user.id, err=> {
+            fs.access('pic/' + href+'-'+name, err=> {
                 if (err) {
-                    fs.mkdirSync('pic/' + user.id);
+                    fs.mkdirSync('pic/' + href+'-'+name);
                 }
                 downloadIterator = recordAndGo(srcCollection);
                 downloadIterator.next();
@@ -175,9 +178,22 @@ function writeStart(index,user_img_list) {
                 downloadIterator.next(wholeSrcOfQuestion)
             } else {
                 let writedSrc = JSON.parse(data);
+
+                let ifNewSrc = false;
                 for (let srcWithPeople of wholeSrcOfQuestion) {
-                    if (writedSrc.indexOf(srcWithPeople.src) == -1) newSrc.push(srcWithPeople)
+                    if (writedSrc.indexOf(srcWithPeople.src) == -1) {
+                        ifNewSrc = true;
+                        newSrc.push(srcWithPeople);
+                        writedSrc.push(srcWithPeople.src)
+                    }
                 }
+
+                if (ifNewSrc) {
+                    fs.writeFile(recordPath, JSON.stringify(writedSrc), (err)=> {
+                        if (err) log(err)
+                    });
+                }
+                
                 downloadIterator.next(newSrc);
                 // downloadIterator.next(wholeSrcOfQuestion)
             }
@@ -186,8 +202,9 @@ function writeStart(index,user_img_list) {
     }
 
     function *recordAndGo(wholeSrcOfQuestion) {
-        let recordPath = 'zhihu/user-spider/userImageRecord/' + user.id + '.js';
+        let recordPath = 'zhihu/user-spider/userImageRecord/' + href + '.js';
         let filterSrc = yield * recordSrc(wholeSrcOfQuestion, recordPath);
+        // log(filterSrc);
         yield * ready(filterSrc);
     }
 
@@ -195,7 +212,7 @@ function writeStart(index,user_img_list) {
         let length = wholeSrcOfQuestion.length;
         log('find', length, ' images');
         if (length) {
-            yield *writeImages(wholeSrcOfQuestion, user, downloadIterator, notifyOfContinue, 'pic/' + user.id);
+            yield *writeImages(wholeSrcOfQuestion, {href,name,dir:href+'-'+name}, downloadIterator, notifyOfContinue);
         } else {
             notifyOfContinue();
         }
@@ -203,17 +220,18 @@ function writeStart(index,user_img_list) {
     }
 
     function notifyOfContinue() {
-        //singleDownload=true;
+        /*//singleDownload=true;
         if (!singleDownload && index < user_img_list.length - 1) {
             writeStart(++index)
         } else {
             log('all finished!!!')
-        }
+        }*/
+        log('download finish!')
     }
 
 
     /*get*/
-    indexGet(page);
+    return indexGet;
 }
 
 
@@ -233,31 +251,35 @@ function ifAlreadyRecord(item,arr){
     return {recorded:false}
 }
 function fetchImageOfUser(href,id,title){
-    fs.readFile(__dirname+'/user-list.js','utf8',(err,data)=>{
-        let currentSrcArr=JSON.parse(data);
-        let newSrc={href,id,name:title,index:currentSrcArr.length};
-        let result=ifAlreadyRecord(newSrc,currentSrcArr);
-        if(result.recorded){
-            log('Already Record!Start to fetch images!');
-            writeStart(result.index,currentSrcArr)
-        }else{
-            currentSrcArr.push(newSrc);
-            fs.writeFile(__dirname+'/user-list.js',JSON.stringify(currentSrcArr),(err)=>{
-                if(err){
-                    log(err)
-                }else{
-                    writeStart(currentSrcArr.length-1,currentSrcArr)
-                }
-            })
-        }
+    let indexGet=prepareForWrite(href);
+    indexGet(function(name,callback){
+        fs.readFile(__dirname+'/user-list.js','utf8',(err,data)=>{
+            let currentSrcArr=JSON.parse(data);
+            let newSrc={href,id,name:title,index:currentSrcArr.length};
+            let result=ifAlreadyRecord(newSrc,currentSrcArr);
+            if(result.recorded){
+                log('Already Record!Start to fetch images!');
+                callback()
+            }else{
+                currentSrcArr.push(newSrc);
+                fs.writeFile(__dirname+'/user-list.js',JSON.stringify(currentSrcArr),(err)=>{
+                    if(err){
+                        log(err)
+                    }else{
+                        callback()
+                    }
+                })
+            }
 
+        });
     });
+
 
 }
 
 module.exports={
-    fetchImageOfUser,
-    writeStart
+    fetchImageOfUser
+    // writeStart
 };
 
-exports.writeStart = writeStart;
+// exports.writeStart = writeStart;

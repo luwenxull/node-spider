@@ -6,7 +6,7 @@ let request = require('request');
 function preHandle(srcArr, item) {
     for (let i = 0; i < srcArr.length; i++) {
         srcArr[i].index = i;
-        srcArr[i].id = item.href;
+        // srcArr[i].id = item.href;
     }
 }
 function * writeImages(srcArr, item, iterator, notify) {
@@ -14,7 +14,8 @@ function * writeImages(srcArr, item, iterator, notify) {
     let groupIndex = 0,
         groupCount = Math.ceil(srcArr.length / 20),
         length = srcArr.length,
-        id = item.href,
+        href = item.href,
+        dir=item.dir,
         successCount = 0,
         downloadFinish = false;
 
@@ -65,11 +66,11 @@ function * writeImages(srcArr, item, iterator, notify) {
     let writeImage = function (srcData, offsetInfo, groupOpenedStreams, groupIndex) {
         let {src, people, index,question} = srcData,
             {offsetStart, offsetEnd}=offsetInfo;
-        let savePath=path.join('pic', id, (people || question) + path.basename(src));
+        let savePath=path.join('pic', dir, (people || question) + path.basename(src));
         let stream = fs.createWriteStream(savePath);
         stream.on('close', () => {
             if (!downloadFinish) {
-                log('save', src, index, offsetStart + '~' + offsetEnd, length,id);
+                log('save', src, index, offsetStart + '~' + offsetEnd, length,href);
                 successCount++;
                 groupWriteCheck(stream, groupOpenedStreams)
             }

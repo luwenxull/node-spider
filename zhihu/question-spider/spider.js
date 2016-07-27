@@ -41,7 +41,7 @@ function prepareForWrite(href) {
             let $ = cheerio.load(body);
             qid = $('#zh-question-detail').data('resourceid');
             title = $('title').text().replace(/\s/g,'').slice(0,-4);
-            fn(href,qid,title,()=>{
+            fn(qid,title,()=>{
                 log('find', findImgOfAuthorAndConcat($), ' images of index,total:', wholeSrcOfQuestion.length, 'continue...');
                 getCollapsedAnswers();
             });
@@ -95,7 +95,7 @@ function prepareForWrite(href) {
         let length = wholeSrcOfQuestion.length;
         log('find', length, ' images');
         if (length) {
-            yield *writeImages(wholeSrcOfQuestion, {href,qid,title}, downloadIterator, notifyOfContinue);
+            yield *writeImages(wholeSrcOfQuestion, {href,qid,title,dir:href+'-'+title}, downloadIterator, notifyOfContinue);
         } else {
             notifyOfContinue();
         }
@@ -166,12 +166,12 @@ function prepareForWrite(href) {
                         log('find', count, ' images in offset', offset / 10, ',total:', wholeSrcOfQuestion.length, 'continue...');
                         loopPost(offset + 10);
                     } else {
-                        fs.access('pic/' + href, err=> {
+                        fs.access('pic/' + href+'-'+title, err=> {
                             if (err) {
-                                fs.mkdirSync('pic/' + title);
+                                fs.mkdirSync('pic/' + href+'-'+title);
                             }
-                            /*downloadIterator = recordAndGo();
-                            downloadIterator.next();*/
+                            downloadIterator = recordAndGo();
+                            downloadIterator.next();
                         });
                     }
                 }
@@ -215,6 +215,7 @@ function prepareForWrite(href) {
         } else {
             log('all finished!!!')
         }*/
+        log('download finish!')
     }
 
     return indexGet
@@ -241,7 +242,7 @@ function ifAlreadyRecord(item, arr) {
 function fetchImageOfQuestion(href) {
 
     let indexGet = prepareForWrite(href);
-    indexGet(function (href,qid,title,callback) {
+    indexGet(function (qid,title,callback) {
         fs.readFile(__dirname + '/img-list.js', 'utf8', (err, data)=> {
             let currentSrcArr = JSON.parse(data);
             let newSrc = {href, qid, title, index: currentSrcArr.length};
