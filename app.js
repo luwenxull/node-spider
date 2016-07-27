@@ -34,12 +34,7 @@ app.use(function* () {
 });*/
 let question_spider= require('./zhihu/question-spider/spider'),
     user_spider=require('./zhihu/user-spider/spider');
-// question_spider.writeStart(20);
-// question_spider.fetchImageOfQuestion();
- /*
-let spider=require('./zhihu/user-spider/spider');
-spider.writeStart(7);*/
-/*
-//reWrite('38694587');
-// writeStart(0);*/
+
+let tumblr_test=require('./tumblr/spider');
+tumblr_test();
 app.listen(3000);

@@ -8,7 +8,7 @@ let request = require('request');
 let cookieValue = require('../cookie');
 
 /*写图片*/
-let {writeImages}=require('./../writeImages');
+let {writeImages}=require('../../util/groupDownload');
 
 /*参数*/
 let pageSize = 10
@@ -200,8 +200,6 @@ function prepareForWrite(href) {
                 log(err)
             }
             let $ = cheerio.load(body);
-            fs.writeFile('test.html', body, ()=> {
-            });
             log('find', findImgOfAuthorAndConcat($), ' images of collapsed answers ,total:', wholeSrcOfQuestion.length, 'continue...');
             loopPost(10)
         });

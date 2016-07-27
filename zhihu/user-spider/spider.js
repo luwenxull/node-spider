@@ -9,7 +9,7 @@ let request = require('request');
 // let user_img_list = require('./user-list');
 let cookieValue=require('../cookie');
 /*写图片*/
-let {writeImages}=require('./../writeImages');
+let {writeImages}=require('../../util/groupDownload');
 
 let baseGetUrl = 'https://www.zhihu.com/people/$$id/answers',
     deepQuestionUrl = 'https://www.zhihu.com';
