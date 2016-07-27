@@ -17,26 +17,11 @@ app.use(function* (next) {
 router.get('/',function *() {
     // this.body=
 }).post('/zh/q',koaBody,function*(...args){
-    /*let path=this.request.path,
-        pathArr=path.split('/');
-    let title=this.request.querystring.replace('t=','').replace(/\\u/g,'|0x').split('|').slice(1);
-    let href=pathArr[3],
-        qid=pathArr[4];
-
-    this.body=href+'.'+qid+'.'+title*/
     let reqBody=this.request.body;
-    //log(reqBody);
     question_spider.fetchImageOfQuestion(reqBody.href,reqBody.qid,reqBody.title);
     this.body='finish'
 }).post('/zh/u/',koaBody,function*(){
-    /*let path=this.request.path,
-        pathArr=path.split('/');
-    let title=this.request.querystring.replace('t=','').replace(/\\u/g,'|0x').split('|').slice(1);
-    let href=pathArr[3];
-    user_spider.fetchImageOfUser(href,href,title);
-    this.body=href+'.'+title*/
     let reqBody=this.request.body;
-    //log(reqBody);
     user_spider.fetchImageOfUser(reqBody.href,reqBody.href,reqBody.name);
     this.body='finish'
 });

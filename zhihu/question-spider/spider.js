@@ -5,7 +5,7 @@ let path = require('path');
 let request = require('request');
 // let question_img_list = require('./img-list');
 
-let cookieValue=require('../cookie');
+let cookieValue = require('../cookie');
 
 /*写图片*/
 let {writeImages}=require('./../writeImages');
@@ -15,32 +15,40 @@ let pageSize = 10
     , offset = 10;
 let baseGetUrl = 'https://www.zhihu.com/question/'
     , basePostUrl = 'https://www.zhihu.com/node/QuestionAnswerListV2'
-    , collapsedAnswers='https://www.zhihu.com/node/QuestionCollapsedAnswerListV2';
+    , collapsedAnswers = 'https://www.zhihu.com/node/QuestionCollapsedAnswerListV2';
 
-function writeStart(index,question_img_list) {
+let j = request.jar();
+let cookie = request.cookie(cookieValue);
+j.setCookie(cookie, 'https://www.zhihu.com');
+
+function prepareForWrite(href) {
     let singleDownload = true,
         downloadIterator;
-    let ni_ming_index=0;
-    let wholeSrcOfQuestion=[];
+    let ni_ming_index = 0;
+    let wholeSrcOfQuestion = [];
 
-    let question = question_img_list[index],
-        qid=question.qid;
+    let qid, title;
 
-    // log(index,question_img_list);
-
-
-    function indexGet() {
+    function indexGet(fn) {
         let optionsOfGet = {
-            method: 'GET', url: baseGetUrl + question.href
+            method: 'GET',
+            url: baseGetUrl + href,
+            jar: j
         };
         request(optionsOfGet, (err, res, body) => {
             if (err) log(err);
+            // fs.writeFile('index-'+question.href+'.html',body,()=>{});
             let $ = cheerio.load(body);
-            findImgOfAuthorAndConcat($);
-             //loopPost(10);
-            getCollapsedAnswers();
+            qid = $('#zh-question-detail').data('resourceid');
+            title = $('title').text().replace(/\s/g,'').slice(0,-4);
+            fn(href,qid,title,()=>{
+                log('find', findImgOfAuthorAndConcat($), ' images of index,total:', wholeSrcOfQuestion.length, 'continue...');
+                getCollapsedAnswers();
+            });
+
         });
     }
+
     function *recordSrc(recordPath) {
         let filter = yield fs.readFile(recordPath, (err, data)=> {
             let newSrc = [];
@@ -55,16 +63,16 @@ function writeStart(index,question_img_list) {
                 downloadIterator.next(wholeSrcOfQuestion)
             } else {
                 let writedSrc = JSON.parse(data);
-                let ifNewSrc=false;
+                let ifNewSrc = false;
                 for (let srcWithPeople of wholeSrcOfQuestion) {
-                    if (writedSrc.indexOf(srcWithPeople.src) == -1){
-                        ifNewSrc=true;
+                    if (writedSrc.indexOf(srcWithPeople.src) == -1) {
+                        ifNewSrc = true;
                         newSrc.push(srcWithPeople);
                         writedSrc.push(srcWithPeople.src)
                     }
                 }
 
-                if(ifNewSrc){
+                if (ifNewSrc) {
                     fs.writeFile(recordPath, JSON.stringify(writedSrc), (err)=> {
                         if (err) log(err)
                     });
@@ -77,8 +85,9 @@ function writeStart(index,question_img_list) {
     }
 
     function *recordAndGo() {
-        let recordPath = 'zhihu/question-spider/questionImageRecord/' + question.href + '.js';
+        let recordPath = 'zhihu/question-spider/questionImageRecord/' + href + '.js';
         let filterSrc = yield * recordSrc(recordPath);
+
         yield * ready(filterSrc);
     }
 
@@ -86,7 +95,7 @@ function writeStart(index,question_img_list) {
         let length = wholeSrcOfQuestion.length;
         log('find', length, ' images');
         if (length) {
-            yield *writeImages(wholeSrcOfQuestion, question, downloadIterator, notifyOfContinue);
+            yield *writeImages(wholeSrcOfQuestion, {href,qid,title}, downloadIterator, notifyOfContinue);
         } else {
             notifyOfContinue();
         }
@@ -94,9 +103,9 @@ function writeStart(index,question_img_list) {
     }
 
 
-
     function findImgOfAuthorAndConcat($) {
         let href, people, imgs, src;
+        let count = 0;
         $('.zm-item-answer').each((index, answer) => {
             href = $(answer).find('.author-link').attr('href');
             if (href) {
@@ -105,18 +114,18 @@ function writeStart(index,question_img_list) {
             else {
                 people = 'ni-ming' + (ni_ming_index++) + '#'
             }
-            //log(href,people);
             imgs = $(answer).find('.zm-editable-content').find('img').each((index, img) => {
                 src = $(img).attr('src').replace('_b', '_r');
                 if (src.search('http') != -1) {
+                    count++;
                     wholeSrcOfQuestion.push({
                         people, src
                     });
                 }
             })
         });
+        return count;
     }
-
 
 
     function getOptionsOfPost(offset) {
@@ -126,7 +135,7 @@ function writeStart(index,question_img_list) {
             headers: {'content-type': 'application/x-www-form-urlencoded'},
             form: {
                 method: 'next',
-                params: '{"url_token":' + question.href + ',"pagesize":' + pageSize + ',"offset":' + offset + '}'
+                params: '{"url_token":' + href + ',"pagesize":' + pageSize + ',"offset":' + offset + '}'
             }
         };
     }
@@ -149,20 +158,20 @@ function writeStart(index,question_img_list) {
                     let src;
 
                     if (json.msg.length !== 0) {
+                        let count = 0;
                         for (let htmlString of json.msg) {
                             $ = cheerio.load(htmlString);
-                            findImgOfAuthorAndConcat($)
+                            count += findImgOfAuthorAndConcat($)
                         }
-                        log('retrieve images...,find:', wholeSrcOfQuestion.length);
+                        log('find', count, ' images in offset', offset / 10, ',total:', wholeSrcOfQuestion.length, 'continue...');
                         loopPost(offset + 10);
                     } else {
-                        fs.access('pic/' + question.href, err=> {
+                        fs.access('pic/' + href, err=> {
                             if (err) {
-                                fs.mkdirSync('pic/' + question.href);
+                                fs.mkdirSync('pic/' + title);
                             }
-                            //log(wholeSrcOfQuestion);
-                            downloadIterator = recordAndGo();
-                            downloadIterator.next();
+                            /*downloadIterator = recordAndGo();
+                            downloadIterator.next();*/
                         });
                     }
                 }
@@ -178,67 +187,93 @@ function writeStart(index,question_img_list) {
         });
     }
 
-    function getCollapsedAnswers(){
-        let j = request.jar();
-        let cookie = request.cookie(cookieValue);
-        j.setCookie(cookie, 'https://www.zhihu.com');
+    function getCollapsedAnswers() {
         let options = {
             method: 'GET',
-            url: collapsedAnswers+'?params=%7B%22question_id%22%3A'+qid+'%7D',
+            url: collapsedAnswers + '?params=%7B%22question_id%22%3A' + qid + '%7D',
             //qs:{ params: '%7B%22question_id%22%3A6976557%7D' },
             jar: j
         };
-
-        //log(options.qs.params,options.url);
-        log('retrieve collapsed img...');
-        request(options,(err,res,body)=>{
-            $ = cheerio.load(body);
-            findImgOfAuthorAndConcat($);
-            log('find ',wholeSrcOfQuestion.length,'images in collapsed answers');
+        log('retrieve collapsed answers >>>');
+        request(options, (err, res, body)=> {
+            if (err) {
+                log(err)
+            }
+            let $ = cheerio.load(body);
+            fs.writeFile('test.html', body, ()=> {
+            });
+            log('find', findImgOfAuthorAndConcat($), ' images of collapsed answers ,total:', wholeSrcOfQuestion.length, 'continue...');
             loopPost(10)
-        })
+        });
 
+        // loopPost(10)
     }
 
     function notifyOfContinue() {
-        if (!singleDownload && index < question_img_list.length - 1) {
+        /*if (!singleDownload && index < question_img_list.length - 1) {
             writeStart(++index)
         } else {
             log('all finished!!!')
-        }
+        }*/
     }
 
-    indexGet();
+    return indexGet
 }
-
 
 
 process.on('uncaughtException', (err) => {
     log(err);
 });
 
-function fetchImageOfQuestion(href,qid,title){
-    fs.readFile(__dirname+'/img-list.js','utf8',(err,data)=>{
-        let currentSrcArr=JSON.parse(data);
-        let newSrc={href,qid,title,index:currentSrcArr.length};
-        //log(newSrc);
-        currentSrcArr.push(newSrc);
-        fs.writeFile(__dirname+'/img-list.js',JSON.stringify(currentSrcArr),(err)=>{
-            if(err){
-                log(err)
-            }else{
-                writeStart(currentSrcArr.length-1,currentSrcArr)
+
+function ifAlreadyRecord(item, arr) {
+    for (let i = 0; i < arr.length; i++) {
+        if (arr[i].href === item.href) {
+            return {
+                recorded: true,
+                index: i
             }
-        })
+        }
+    }
+    return {recorded: false}
+}
+
+function fetchImageOfQuestion(href) {
+
+    let indexGet = prepareForWrite(href);
+    indexGet(function (href,qid,title,callback) {
+        fs.readFile(__dirname + '/img-list.js', 'utf8', (err, data)=> {
+            let currentSrcArr = JSON.parse(data);
+            let newSrc = {href, qid, title, index: currentSrcArr.length};
+            //log(newSrc);
+            let result = ifAlreadyRecord(newSrc, currentSrcArr);
+            if (result.recorded) {
+                log('Already Record!Start to fetch images!');
+                // writeStart(result.index, currentSrcArr)
+                callback();
+            } else {
+                currentSrcArr.push(newSrc);
+                fs.writeFile(__dirname + '/img-list.js', JSON.stringify(currentSrcArr), (err)=> {
+                    if (err) {
+                        log(err)
+                    } else {
+                        // writeStart(currentSrcArr.length - 1, currentSrcArr)
+                        callback()
+                    }
+                })
+            }
+
+        });
     });
+
 
 }
 
-module.exports={
-    fetchImageOfQuestion,
-    writeStart
+module.exports = {
+    fetchImageOfQuestion
+    // writeStart
 };
 /*
-exports.writeStart = writeStart;
-exports.fetchImageOfQuestion=fetchImageOfQuestion();
-*/
+ exports.writeStart = writeStart;
+ exports.fetchImageOfQuestion=fetchImageOfQuestion();
+ */

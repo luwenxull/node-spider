@@ -221,18 +221,36 @@ process.on('uncaughtException', (err) => {
     log(err);
 });
 
+function ifAlreadyRecord(item,arr){
+    for(let i=0;i<arr.length;i++){
+        if(arr[i].href===item.href){
+            return {
+                recorded:true,
+                index:i
+            }
+        }
+    }
+    return {recorded:false}
+}
 function fetchImageOfUser(href,id,title){
     fs.readFile(__dirname+'/user-list.js','utf8',(err,data)=>{
         let currentSrcArr=JSON.parse(data);
         let newSrc={href,id,name:title,index:currentSrcArr.length};
-        currentSrcArr.push(newSrc);
-        fs.writeFile(__dirname+'/user-list.js',JSON.stringify(currentSrcArr),(err)=>{
-            if(err){
-                log(err)
-            }else{
-                writeStart(currentSrcArr.length-1,currentSrcArr)
-            }
-        })
+        let result=ifAlreadyRecord(newSrc,currentSrcArr);
+        if(result.recorded){
+            log('Already Record!Start to fetch images!');
+            writeStart(result.index,currentSrcArr)
+        }else{
+            currentSrcArr.push(newSrc);
+            fs.writeFile(__dirname+'/user-list.js',JSON.stringify(currentSrcArr),(err)=>{
+                if(err){
+                    log(err)
+                }else{
+                    writeStart(currentSrcArr.length-1,currentSrcArr)
+                }
+            })
+        }
+
     });
 
 }

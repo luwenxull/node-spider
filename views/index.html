@@ -12,10 +12,12 @@
     链接：<input type="text" id="q-href">
     id：<input type="text" id="q-id">
     标题：<input type="text" id="q-title">
+
 </form>
 
 <button onclick="qGet()">获取</button>
-
+<br>
+<button onclick="qClear()">清空</button>
 <hr>
 
 <p>用户</p>
@@ -23,11 +25,18 @@
 <form>
     链接：<input type="text" id="u-href">
     用户名：<input type="text" id="u-name">
+
 </form>
 
 <button onclick="uGet()">获取</button>
-
+<br>
+<button onclick="uClear()">清空</button>
 <script>
+    function qClear(){
+        document.querySelector('#q-href').value='';
+                document.querySelector('#q-id').value='';
+                document.querySelector('#q-title').value='';
+    }
     function qGet() {
         let href = document.querySelector('#q-href').value,
                 qid = document.querySelector('#q-id').value,
@@ -37,6 +46,11 @@
 
     }
 
+
+    function uClear(){
+        document.querySelector('#u-href').value='';
+        document.querySelector('#u-name').value='';
+    }
     function uGet() {
         let href = document.querySelector('#u-href').value,
                 name=document.querySelector('#u-name').value;
