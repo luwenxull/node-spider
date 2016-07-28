@@ -221,7 +221,8 @@ function prepareForWrite(href) {
 
 
 process.on('uncaughtException', (err) => {
-    log(err);
+    log('uncaughtException:',err.name,err.message)
+    // log(err);
 });
 
 

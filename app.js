@@ -36,5 +36,5 @@ let question_spider= require('./zhihu/question-spider/spider'),
     user_spider=require('./zhihu/user-spider/spider');
 
 let tumblr_test=require('./tumblr/spider');
-tumblr_test();
+// tumblr_test.test()
 app.listen(3000);
