@@ -120,10 +120,8 @@ function prepareForWrite(href) {
                                 } else if (!reGot) {
                                     clearTimeout(timeout);
                                     let $ = cheerio.load(body);
-                                    //log(answer.split('/')[2])
                                     getUserQuestionImages($, answer.split('/')[2], body);
                                     count++;
-                                    //log(srcCollection);
                                     if (count == answerWithImage.length) {
                                         // log(srcCollection)
                                         page++;
@@ -145,9 +143,8 @@ function prepareForWrite(href) {
                 if (err) {
                     fs.mkdirSync('pic/' + href + '-' + name);
                 }
-                /*downloadIterator = recordAndGo(srcCollection);
-                downloadIterator.next();*/
-                log('pause')
+                downloadIterator = recordAndGo(srcCollection);
+                downloadIterator.next();
             });
 
             // log(srcCollection)
@@ -158,11 +155,7 @@ function prepareForWrite(href) {
     function getUserQuestionImages($, question, body) {
 
         let content = $('.zm-editable-content img');
-        if (question === '30594270') {
-            fs.writeFile('test.html',content.html(),()=>{})
-        }
         content.each((index, img) => {
-
             let src = $(img).attr('src').replace('_b', '_r');
             if (src.search('http') != -1) {
                 srcCollection.push({
